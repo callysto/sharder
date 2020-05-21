@@ -1,0 +1,9 @@
+oauthlib
+cryptography
+psycopg2-binary
+pycurl
+pymysql
+pyyaml
+ruamel.yaml
+sqlalchemy
+tornado

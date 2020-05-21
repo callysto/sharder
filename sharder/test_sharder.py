@@ -1,5 +1,5 @@
-import pytest
 import sqlalchemy
+import pytest
 
 from tornado import log
 
@@ -7,22 +7,22 @@ from sharder import Sharder
 
 @pytest.fixture
 def engine():
-    engine = sqlalchemy.create_engine('sqlite:///:memory:')
-    return engine
+  engine = sqlalchemy.create_engine('sqlite:///:memory:')
+  return engine
 
 def test_single_shard(engine):
-    s = Sharder(engine, 'hub', ['hub-1'], log=log)
+    s = Sharder(engine, 'hub', ['hub-1'], log=log.app_log)
     assert s.shard('user') == 'hub-1'
 
 def test_multiple_equal_shards(engine):
     """
     Check that we shard entries equally across buckets. If we have 10 buckets
-    and 100 entries, each bucket should see 10 shards
+    and 100 entries, each buckets should see 10 shards
     """
     buckets = [str(i) for i in range(10)]
     entries = [str(i) for i in range(100)]
 
-    s = Sharder(engine, 'hub', buckets, log=log)
+    s = Sharder(engine, 'hub', buckets, log=log.app_log)
     [s.shard(e) for e in entries]
 
     shards = {}
@@ -46,10 +46,10 @@ def test_multiple_unequal_shards(engine):
     """
     buckets = [str(i) for i in range(10)]
     entries = [str(i) for i in range(99)]
-    
-    s = Sharder(engine, 'hub', buckets, log=log)
+
+    s = Sharder(engine, 'hub', buckets, log=log.app_log)
     [s.shard(e) for e in entries]
-    
+
     shards = {}
     for e in entries:
         shard = s.shard(e)
