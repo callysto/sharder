@@ -15,6 +15,8 @@ def list_users():
   q = sharder.session.query(Shard).filter(Shard.kind == 'hub')
   print("{: <45} {: <30}".format("Username", "Hub"))
   for user in q:
+    if 'dummy-' in user.name:
+      continue
     print("{: <45} {: <30}".format(user.name, user.bucket))
 
 def find_user():
@@ -41,6 +43,8 @@ def list_users_on_hub():
       Shard.kind == 'hub', Shard.bucket == args.list_users_on_hub)
   print("{: <45} {: <30}".format("Username", "Hub"))
   for user in q:
+    if 'dummy-' in user.name:
+      continue
     print("{: <45} {: <30}".format(user.name, user.bucket))
 
 def list_hubs():
@@ -52,7 +56,7 @@ def list_hubs():
 
   print("{: <45} {: <30}".format("Hub", "Total Users"))
   for hub in q:
-    print("{: <45} {: <30}".format(hub.bucket, hub.total))
+    print("{: <45} {: <30}".format(hub.bucket, hub.total-1))
 
 def move_user():
   q = sharder.session.query(Shard).filter(
@@ -69,6 +73,14 @@ def move_user():
     sys.exit(1)
 
   user.bucket = args.to_hub
+  sharder.session.commit()
+
+def add_user():
+  if args.to_hub not in config['hubs']:
+    print(f"Count not find hub {args.to_hub}")
+    sys.exit(1)
+
+  sharder.session.add(Shard(kind='hub', bucket=args.to_hub, name=args.add_user))
   sharder.session.commit()
 
 def migrate_hub():
@@ -90,15 +102,16 @@ def migrate_hub():
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='JupyterHub Sharder Admin Utility')
-  parser.add_argument('--config-file', help="The sharder config file")
+  parser.add_argument('--config-file', help="The sharder config file", default="/srv/sharder/sharder.yml")
   parser.add_argument('--find-user', help="Find a user by <user>")
+  parser.add_argument('--add-user', help="Add <user>")
   parser.add_argument('--delete-user', help="Delete <user>")
   parser.add_argument('--list-users-on-hub', help="List all users on <hub>")
   parser.add_argument('--list-hubs', action='store_true', help="List all hubs")
   parser.add_argument('--list-users', action='store_true', help="List all users")
   parser.add_argument('--move-user', help="Move <user>")
   parser.add_argument('--migrate-hub', help="Move all users on <hub>")
-  parser.add_argument('--to-hub', help="Destination <hub> for moves")
+  parser.add_argument('--to-hub', help="Destination <hub> for adds and moves")
   args = parser.parse_args()
 
   l = log.app_log
@@ -125,6 +138,9 @@ if __name__ == "__main__":
 
   if args.delete_user:
     delete_user()
+
+  if args.add_user:
+    add_user()
 
   if args.move_user:
     if args.to_hub is None:
