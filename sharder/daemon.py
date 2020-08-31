@@ -4,6 +4,7 @@ import argparse
 import os
 import sqlite3
 import tornado.ioloop
+import urllib
 import yaml
 
 from concurrent.futures import ThreadPoolExecutor
@@ -24,9 +25,8 @@ class ShardHandler(tornado.web.RequestHandler):
         sharder = create_sharder(config, db, log)
         return sharder.shard(username)
 
-    # I can *almost* convince myself that this is OK to be a GET
     @gen.coroutine
-    def get(self):
+    def get(self, args=None):
         # This resource is protected so we should see the REMOTE_USER header
         header_name = self.settings['header']
         remote_user = self.request.headers.get(header_name, "")
@@ -40,7 +40,24 @@ class ShardHandler(tornado.web.RequestHandler):
 
         self.set_cookie('hub', hub)
         #self.request.headers['Cookie'] = f'hub={hub}'
-        self.redirect(f'https://{hub}/jupyter/hub')
+
+        # This is for nbgitpuller redirects to work
+        if args == 'user-redirect/git-pull':
+            params = {}
+            for k, v in self.request.arguments.items():
+                if len(v) > 0:
+                    params[k] = v[0]
+
+            redirect_url = (
+                f'https://{hub}/jupyter/hub/user-redirect/git-pull?'
+                f'{urllib.parse.urlencode(params)}')
+                
+            log.info(f'Performing an nbgitpuller redirect to: {redirect_url}')
+            self.redirect(f'{redirect_url}')
+
+        # This is for all other requests
+        else:
+            self.redirect(f'https://{hub}/jupyter/hub')
 
 class HubHandler(tornado.web.RequestHandler):
     @gen.coroutine
@@ -71,6 +88,7 @@ if __name__ == "__main__":
   # Create the web application and set up the routes.
   app = web.Application([
       (r"/shard", ShardHandler),
+      (r"/shard/(.*)", ShardHandler),
       (r"/hubs/(hub-[0-9]+)", HubHandler),
     ],
     log=log.app_log,
