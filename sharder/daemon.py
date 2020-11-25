@@ -31,6 +31,7 @@ class ShardHandler(tornado.web.RequestHandler):
         header_name = self.settings['header']
         remote_user = self.request.headers.get(header_name, "")
 
+        config = self.settings['config']
         log = self.settings['log']
         if remote_user == "":
             log.info(f'Failed to find REMOTE_USER')
@@ -38,7 +39,7 @@ class ShardHandler(tornado.web.RequestHandler):
 
         hub = yield self.shard(remote_user)
 
-        self.set_cookie('hub', hub)
+        self.set_cookie('hub', hub, domain=config['domain'])
         #self.request.headers['Cookie'] = f'hub={hub}'
 
         # This is for nbgitpuller redirects to work
