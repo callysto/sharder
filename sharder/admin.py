@@ -23,7 +23,10 @@ def find_user():
   q = sharder.session.query(Shard).filter(
       Shard.kind == 'hub', Shard.name == args.find_user)
   if q.count() < 1:
-    print("User not found. Usernames may be case sensitive.", sys.stderr)
+    print(
+      "User not found. Usernames may be case sensitive.",
+      file = sys.stderr
+    )
     sys.exit(1)
   else:
     print("{: <45} {: <30}".format("Username", "Hub"))
