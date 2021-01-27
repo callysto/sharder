@@ -22,9 +22,13 @@ def list_users():
 def find_user():
   q = sharder.session.query(Shard).filter(
       Shard.kind == 'hub', Shard.name == args.find_user)
-  print("{: <45} {: <30}".format("Username", "Hub"))
-  for user in q:
-    print("{: <45} {: <30}".format(user.name, user.bucket))
+  if q.count() < 1:
+    print("User not found. Usernames may be case sensitive.", sys.stderr)
+    sys.exit(1)
+  else:
+    print("{: <45} {: <30}".format("Username", "Hub"))
+    for user in q:
+      print("{: <45} {: <30}".format(user.name, user.bucket))
 
 def delete_user():
   q = sharder.session.query(Shard).filter(
