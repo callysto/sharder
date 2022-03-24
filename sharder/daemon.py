@@ -79,7 +79,7 @@ if __name__ == "__main__":
   config = default_config()
   if args.config_file is not None:
     with open(args.config_file) as f:
-      c = yaml.load(f)
+      c = yaml.safe_load(f)
       config.update(c)
 
   cookie_secret = os.environ.get('COOKIE_SECRET')
