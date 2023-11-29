@@ -2,8 +2,7 @@ import tornado.web
 
 from sqlalchemy import func
 from sqlalchemy import Column, Integer, String, UniqueConstraint, Index
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 
 DBBase = declarative_base()
@@ -31,10 +30,10 @@ class Sharder:
     across multiple buckets, ensuring that once an object is assigned to a bucket it always
     is assigned to the same bucket.
     """
-    def __init__(self, engine, kind, buckets, log):
+    def __init__(self, engine, kind, hubs, log):
         self.engine  = engine
         self.kind    = kind
-        self.buckets = buckets
+        self.hubs    = hubs
         self.log     = log
 
         DBBase.metadata.create_all(engine, checkfirst=True)
@@ -45,9 +44,9 @@ class Sharder:
 
         # Make sure that we have at least one dummy entry for each bucket
         # NOTE: This is rather poor SQL design, but we'll defer that until later.
-        for bucket in self.buckets:
-            if self.session.query(Shard.bucket).filter_by(bucket=bucket, name=f'dummy-{bucket}').scalar() is None:
-                self.session.add(Shard(kind=self.kind, bucket=bucket, name=f'dummy-{bucket}'))
+        for hub in self.hubs:
+            if self.session.query(Shard.bucket).filter_by(bucket=hub['name'], name=f"dummy-{hub['name']}").scalar() is None:
+                self.session.add(Shard(kind=self.kind, bucket=hub['name'], name=f"dummy-{hub['name']}"))
                 self.session.commit()
 
     def shard(self, name):
@@ -63,16 +62,29 @@ class Sharder:
             return bucket
 
         # name isn't assigned to a bucket yet, add an entry
-        q = (self.session.query(Shard.bucket, func.count(Shard.bucket)
+        rows = (self.session.query(Shard.bucket, func.count(Shard.bucket)
             .label('total'))
             .filter(Shard.kind == self.kind)
             .group_by(Shard.bucket)
-            .order_by('total').first()
+            .order_by('total').all()
         )
-        if q:
-            bucket = q.bucket
-        self.session.add(Shard(kind=self.kind, bucket=bucket, name=name))
-        self.log.info(f'Assigned {name} to bucket {bucket}')
-        self.session.commit()
+
+        buckets = {}
+        for row in rows:
+            buckets[row[0]] = row[1]
+
+        offsets = {}
+        for hub in self.hubs:
+            offsets[hub['name']] = hub.get('offset', 0)
+
+        for b, c in buckets.items():
+            buckets[b] = c - offsets[b]
+        
+        # Assign to least used
+        bucket = min(buckets, key=buckets.get)
+        if bucket:
+            self.session.add(Shard(kind=self.kind, bucket=target_bucket, name=name))
+            self.log.info(f'Assigned {name} to bucket {bucket}')
+            self.session.commit()
 
         return bucket
