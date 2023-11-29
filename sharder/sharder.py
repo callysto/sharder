@@ -45,7 +45,7 @@ class Sharder:
 
         # Make sure that we have at least one dummy entry for each bucket
         # NOTE: This is rather poor SQL design, but we'll defer that until later.
-        for bucket in buckets:
+        for bucket in self.buckets:
             if self.session.query(Shard.bucket).filter_by(bucket=bucket, name=f'dummy-{bucket}').scalar() is None:
                 self.session.add(Shard(kind=self.kind, bucket=bucket, name=f'dummy-{bucket}'))
                 self.session.commit()
