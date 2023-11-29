@@ -74,20 +74,20 @@ class Sharder:
         for row in rows:
             buckets[row[0]] = row[1]
 
-        # If a hub has an offset defined, act as if the offset was added
-        # to the total bucket count
-        offsets = {}
+        # If a hub has extra_shards defined, act as if they have been
+        # added to the bucket count
+        extra_shards = {}
         for hub in self.hubs:
-            offsets[hub['name']] = hub.get('offset', 0)
+            extra_shards[hub['name']] = hub.get('extra_shards', 0)
 
         for b, c in buckets.items():
-            buckets[b] = c + offsets[b]
+            buckets[b] = c + extra_shards[b]
         
         # Assign to least used
         bucket = min(buckets, key=buckets.get)
         if bucket:
             self.session.add(Shard(kind=self.kind, bucket=bucket, name=name))
-            self.log.info(f'Assigned {name} to bucket {bucket}')
+            self.log.info(f'Assigned {name} to bucket {bucket} (effective count : {buckets})')
             self.session.commit()
 
         return bucket

@@ -82,7 +82,6 @@ def create_sharder(config, engine, log):
     if 'hubs' in config:
       hubs = config['hubs']
 
-    log.info(f'Loading hubs {hubs}')
     sharder = Sharder(engine, 'hub', hubs, log)
 
     return sharder

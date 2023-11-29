@@ -82,10 +82,9 @@ def test_shard_with_offset(engine):
         else:
             shards[shard]  = 1
 
-    # Add an offset of 2 to the first bucket. The next 18 hub
-    # assignments should be spread evenly among the remaining
-    # hubs
-    s.hubs[0]['offset'] = 2
+    # Add 2 extra_shards to the first bucket.
+    # The next 18 assignments should be spread evenly among the remaining hubs
+    s.hubs[0]['extra_shards'] = 2
     extra_entries = [str(i) for i in range(100,118)]
 
     for e in extra_entries:

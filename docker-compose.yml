@@ -14,6 +14,7 @@ services:
     volumes:
       #- /Users/iana/sharder/sharder.yml:/srv/sharder/sharder.yml:ro
       - /Users/iana/sharder/sharder.yml:/srv/sharder/sharder.yml:ro
+      - /Users/iana/sharder/sharder.db:/srv/sharder/sharder.db
     ports:
       - "8888:8888"
     environment:
