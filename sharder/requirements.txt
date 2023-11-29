@@ -5,5 +5,5 @@ pycurl
 pymysql
 pyyaml
 ruamel.yaml
-sqlalchemy
+sqlalchemy<2
 tornado

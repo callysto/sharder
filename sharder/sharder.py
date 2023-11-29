@@ -2,7 +2,8 @@ import tornado.web
 
 from sqlalchemy import func
 from sqlalchemy import Column, Integer, String, UniqueConstraint, Index
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 
 DBBase = declarative_base()
@@ -73,17 +74,19 @@ class Sharder:
         for row in rows:
             buckets[row[0]] = row[1]
 
+        # If a hub has an offset defined, act as if the offset was added
+        # to the total bucket count
         offsets = {}
         for hub in self.hubs:
             offsets[hub['name']] = hub.get('offset', 0)
 
         for b, c in buckets.items():
-            buckets[b] = c - offsets[b]
+            buckets[b] = c + offsets[b]
         
         # Assign to least used
         bucket = min(buckets, key=buckets.get)
         if bucket:
-            self.session.add(Shard(kind=self.kind, bucket=target_bucket, name=name))
+            self.session.add(Shard(kind=self.kind, bucket=bucket, name=name))
             self.log.info(f'Assigned {name} to bucket {bucket}')
             self.session.commit()
 

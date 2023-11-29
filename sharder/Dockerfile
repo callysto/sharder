@@ -1,4 +1,4 @@
-FROM python:3.6-slim-stretch
+FROM python:3.9-slim
 
 MAINTAINER Ian Allison <iana@pims.math.ca>
 
@@ -10,16 +10,14 @@ RUN apt-get update && \
       && \
     apt-get purge && apt-get clean
 
-RUN pip3 install --no-cache-dir tornado ruamel.yaml oauthlib psycopg2-binary pycurl sqlalchemy pyyaml pymysql cryptography
+RUN pip3 install --no-cache-dir tornado ruamel.yaml oauthlib psycopg2-binary pycurl "sqlalchemy<2" pyyaml pymysql cryptography
 
 RUN mkdir -p /srv/sharder
-ADD db.py /srv/sharder/db.py
 ADD sharder.py /srv/sharder/sharder.py
 ADD daemon.py /srv/sharder/daemon.py
-ADD wait-for-it.sh /srv/sharder/wait-for-it.sh
-RUN chmod +x /srv/sharder/wait-for-it.sh
+ADD utils.py /srv/sharder/utils.py
 ADD templates /srv/sharder/templates
 
 WORKDIR /srv/sharder
 
-ENTRYPOINT ["/srv/sharder/wait-for-it.sh", "-t", "60", "mysql:3306", "--", "python3.6", "/srv/sharder/daemon.py"]
+ENTRYPOINT ["python3", "/srv/sharder/daemon.py", "--config-file", "/srv/sharder/sharder.yml"]
