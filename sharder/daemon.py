@@ -14,13 +14,14 @@ from tornado import concurrent, gen, log, web
 from sharder import Sharder
 from utils import default_config, configure_database, create_sharder
 
+
 class ShardHandler(tornado.web.RequestHandler):
     _sharder_thread_pool = ThreadPoolExecutor(max_workers=1)
 
-    @concurrent.run_on_executor(executor='_sharder_thread_pool')
+    @concurrent.run_on_executor(executor="_sharder_thread_pool")
     def shard(self, username):
-        config = self.settings['config']
-        log = self.settings['log']
+        config = self.settings["config"]
+        log = self.settings["log"]
         db = configure_database(config, log)
         sharder = create_sharder(config, db, log)
         return sharder.shard(username)
@@ -28,83 +29,87 @@ class ShardHandler(tornado.web.RequestHandler):
     @gen.coroutine
     def get(self, args=None):
         # This resource is protected so we should see the REMOTE_USER header
-        header_name = self.settings['header']
+        header_name = self.settings["header"]
         remote_user = self.request.headers.get(header_name, "")
 
-        config = self.settings['config']
-        log = self.settings['log']
+        config = self.settings["config"]
+        log = self.settings["log"]
         if remote_user == "":
-            log.info(f'Failed to find REMOTE_USER')
+            log.info(f"Failed to find REMOTE_USER")
             raise web.HTTPError(401, "Hub sharder unable to find auth headers")
 
         hub = yield self.shard(remote_user)
 
-        self.set_cookie('hub', hub, domain=config['domain'])
-        #self.request.headers['Cookie'] = f'hub={hub}'
+        self.set_cookie("hub", hub, domain=config["domain"])
+        # self.request.headers['Cookie'] = f'hub={hub}'
 
         # This is for nbgitpuller redirects to work
-        if args == 'user-redirect/git-pull':
+        if args == "user-redirect/git-pull":
             params = {}
             for k, v in self.request.arguments.items():
                 if len(v) > 0:
                     params[k] = v[0]
 
             redirect_url = (
-                f'https://{hub}/jupyter/hub/user-redirect/git-pull?'
-                f'{urllib.parse.urlencode(params)}')
-                
-            log.info(f'Performing an nbgitpuller redirect to: {redirect_url}')
-            self.redirect(f'{redirect_url}')
+                f"https://{hub}/jupyter/hub/user-redirect/git-pull?"
+                f"{urllib.parse.urlencode(params)}"
+            )
+
+            log.info(f"Performing an nbgitpuller redirect to: {redirect_url}")
+            self.redirect(f"{redirect_url}")
 
         # This is for all other requests
         else:
-            self.redirect(f'https://{hub}/jupyter/hub')
+            self.redirect(f"https://{hub}/jupyter/hub")
+
 
 class HubHandler(tornado.web.RequestHandler):
     @gen.coroutine
     def get(self, hub):
-        log.app_log.info('Hub Handler')
-        self.render('templates/page.html')
+        log.app_log.info("Hub Handler")
+        self.render("templates/page.html")
+
 
 if __name__ == "__main__":
-  # Configure comment-line argument parsing.
-  parser = argparse.ArgumentParser(description='JupyterHub Sharder')
-  parser.add_argument('--config-file')
-  args = parser.parse_args()
+    # Configure comment-line argument parsing.
+    parser = argparse.ArgumentParser(description="JupyterHub Sharder")
+    parser.add_argument("--config-file")
+    args = parser.parse_args()
 
-  # Configure logger.
-  log.enable_pretty_logging()
+    # Configure logger.
+    log.enable_pretty_logging()
 
-  # Read the configuration file.
-  config = default_config()
-  if args.config_file is not None:
-    with open(args.config_file) as f:
-      c = yaml.safe_load(f)
-      config.update(c)
+    # Read the configuration file.
+    config = default_config()
+    if args.config_file is not None:
+        with open(args.config_file) as f:
+            c = yaml.safe_load(f)
+            config.update(c)
 
-  cookie_secret = os.environ.get('COOKIE_SECRET')
-  if cookie_secret is None and 'cookie_secret' in config:
-    cookie_secret = config['cookie_secret']
+    cookie_secret = os.environ.get("COOKIE_SECRET")
+    if cookie_secret is None and "cookie_secret" in config:
+        cookie_secret = config["cookie_secret"]
 
-  # Create the web application and set up the routes.
-  app = web.Application([
-      (r"/shard", ShardHandler),
-      (r"/shard/(.*)", ShardHandler),
-      (r"/hubs/(hub-[0-9]+)", HubHandler),
-    ],
-    log=log.app_log,
-    config=config,
-    header='REMOTE_USER',
-    cookie_secret=cookie_secret,
-  )
+    # Create the web application and set up the routes.
+    app = web.Application(
+        [
+            (r"/shard", ShardHandler),
+            (r"/shard/(.*)", ShardHandler),
+            (r"/hubs/(hub-[0-9]+)", HubHandler),
+        ],
+        log=log.app_log,
+        config=config,
+        header="REMOTE_USER",
+        cookie_secret=cookie_secret,
+    )
 
-  # Set up the listening service which will
-  # accept and process incoming requests.
-  if 'sharder_port' in config:
-    sharder_port = config['sharder_port']
+    # Set up the listening service which will
+    # accept and process incoming requests.
+    if "sharder_port" in config:
+        sharder_port = config["sharder_port"]
 
-  if 'sharder_listen' in config:
-    sharder_listen = config['sharder_listen']
+    if "sharder_listen" in config:
+        sharder_listen = config["sharder_listen"]
 
-  app.listen(sharder_port, sharder_listen)
-  tornado.ioloop.IOLoop.current().start()
+    app.listen(sharder_port, sharder_listen)
+    tornado.ioloop.IOLoop.current().start()
