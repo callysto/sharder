@@ -16,6 +16,7 @@ RUN mkdir -p /srv/sharder
 ADD sharder.py /srv/sharder/sharder.py
 ADD daemon.py /srv/sharder/daemon.py
 ADD utils.py /srv/sharder/utils.py
+ADD admin.py /srv/sharder/admin.py
 ADD templates /srv/sharder/templates
 
 WORKDIR /srv/sharder

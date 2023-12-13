@@ -53,10 +53,23 @@ def list_hubs():
     .filter(Shard.kind == 'hub')
     .group_by(Shard.bucket)
     .order_by('bucket'))
+ 
+  hub_counts = {}
+  for hub in sharder.hubs:
+    hub_counts[hub['name']] = {'extra_shards' : hub.get("extra_shards", 0) }
 
-  print("{: <45} {: <30}".format("Hub", "Total Users"))
   for hub in q:
-    print("{: <45} {: <30}".format(hub.bucket, hub.total-1))
+    hub_counts[hub.bucket]['raw'] = hub.total
+
+  print("{: <35} {: <10} {: <10} {: <20}".format("Hub", "Raw", "Extra", "Effective Total Users"))
+  for hub, hubinfo in hub_counts.items():
+      print("{: <35} {: <10} {: < 10} {: <10}".format(
+        hub,
+        hubinfo['raw'],
+        hubinfo['extra_shards'],
+        hubinfo['raw'] + hubinfo['extra_shards']
+      )
+    )
 
 def move_user():
   q = sharder.session.query(Shard).filter(
