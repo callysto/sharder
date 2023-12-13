@@ -2,8 +2,7 @@ import tornado.web
 
 from sqlalchemy import func
 from sqlalchemy import Column, Integer, String, UniqueConstraint, Index
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 
 DBBase = declarative_base()
