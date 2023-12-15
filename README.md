@@ -31,9 +31,9 @@ be set with the determined value.
 
 ## Running the Sharder
 
-A docker-compose file is provided to spin up nginx, postgresql and tornado,
-implementing the full sharder application stack, buy you can also run the
-sharder as a standalone application.
+A docker-compose file is provided to spin up a shell application. You will need
+to provide a `shared.yml` (see `sharder.yml.example`) and a hub database, though
+in the default configuration a new sqlitedb qill be created.
 
 ### As a Standalone Application
 
@@ -45,7 +45,7 @@ You can use systemd with a unit file such as:
 Description=JupyterHub Sharder
 
 [Service]
-ExecStart=/bin/python3.6 /srv/sharder/request-sharder.py --config-file /srv/sharder/sharder.yml
+ExecStart=/bin/python3 /srv/sharder/request-sharder.py --config-file /srv/sharder/sharder.yml
 Restart=on-failure
 
 [Install]
@@ -57,47 +57,26 @@ connections) and setup a tornado webserver. You can make requests against the
 webserver with the REMOTE_USER header set, e.g.
 
 ```
-  curl -H 'REMOTE_USER: iana 127.0.0.1:8888/shard
+  curl -H 'REMOTE_USER: iana' 127.0.0.1:8888/shard
 ```
 
 The output of the request-sharder application should let you know the result of
 the assignment. This assignment should be stable across subsequent requests.
 
+
 ### As a multi-part application
 
 A docker-compose file is provided which will create a database, the sharder and
-and an nginx "edge" server. The database must be configured as part of the build
-process by setting the environment variables POSTGRES_USER, POSTGRES_PASSSWORD
-and POSTGRES_DB, e.g.
+and an nginx "edge" server. The application should be able to use sqlite, mysql
+or postgres, but you will need to adjust the docker-compose accordingly.
 
+The configuration can be mounted as a readonly file via docker-compose. If it
+doesn't already exist, `/srv/sharder/sharder.db` will be initialized. If you
+wish to use an existing database, it may be mounted via docker-compose similar
+to the configuration (though read-write).
 ```
-  $ vi sharding.env  # This name is already part of the .gitignore
-POSTGRES_USER="shard_user"
-POSTGRES_PASSWORD="some long random password here"
-POSTGRES_DB="hubshards"
-export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
-
-MYSQL_USER="shard_user"
-MYSQL_PASSWORD="some long random password here"
-MYSQL_ROOT_PASSWORD="some long random password here"
-MYSQL_DATABASE="hubshards"
-export MYSQL_ROOT_PASSWORD MYSQL_USER MYSQL_PASSWORD MYSQL_DATABASE
-
-  $ source sharding.env
+  $ docker-compose up -d --build
 ```
-
-A new directory called db will be created in this directory and will be used to
-store the hub database files persistently. If you want do reset the system it is
-safe to delete this directory.
-
-```
-  $ docker-compose build
-  $ docker-compuse up -d
-```
-
-The sharder has a dependency on the database so it is launched by wait-for-it.sh
-to give the database time to be prepared, once it is ready the sharder will
-apply the schema and wait to service requests.
 
 You can use an extensions such as
 [ModHeader](https://chrome.google.com/webstore/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj/related?hl=en)
@@ -107,38 +86,7 @@ hub cookie if you update the REMOTE_USER header). To see the logs on the sharder
 you can run
 
 ```
-  $ docker-compose logs sharder
-```
-
-If you want to inspect the database you can use psql in the db container, e.g.
-
-```
-  $ docker-compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB
-psql (10.5 (Debian 10.5-1.pgdg90+1))
-Type "help" for help.
-
-hubshards=# \c hubshards
-You are now connected to database "hubshards" as user "shard_user".
-hubshards=# \dt
-          List of relations
- Schema | Name  | Type  |   Owner
---------+-------+-------+------------
- public | shard | table | shard_user
-(1 row)
-
-hubshards=# SELECT * from shard;
- id | kind | bucket |    name
-----+------+--------+-------------
-  1 | hub  | hub-0  | dummy-hub-0
-  2 | hub  | hub-1  | dummy-hub-1
-  3 | hub  | hub-2  | dummy-hub-2
-  4 | hub  | hub-3  | dummy-hub-3
-  5 | hub  | hub-4  | dummy-hub-4
-  6 | hub  | hub-0  | iana
-  7 | hub  | hub-1  | brian
-(7 rows)
-
-hubshards=# \q
+  $ docker-compose logs -f sharder
 ```
 
 ### Administration
@@ -147,7 +95,7 @@ There is an `admin.py` script included which can assist in performing various
 administration actions:
 
 ```
-python3.6 admin.py --config-file /path/to/sharder.yml --help
+python3 admin.py --config-file /path/to/sharder.yml --help
 ```
 
 ### pytest
@@ -161,5 +109,5 @@ that they are "fairly" assigned according to the sharder policy.
  ...
 test_sharder.py ...                                              [100%]
 
-======================= 3 passed in 0.76 seconds =======================
+======================= 4 passed in 0.76 seconds =======================
 ```

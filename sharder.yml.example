@@ -1,0 +1,10 @@
+db_file: ./sharder.db
+db_type: sqlite
+domain: callysto.ca
+hubs:
+  - name: hub-01.callysto.ca
+  - name: hub-02.callysto.ca
+    extra_shards: 403
+  - name: hub-03.callysto.ca
+    extra_shards: 403
+sharder_listen: 0.0.0.0
